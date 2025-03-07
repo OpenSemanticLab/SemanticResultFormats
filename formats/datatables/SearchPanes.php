@@ -16,38 +16,29 @@ use SMW\DataValueFactory;
 use SMW\DIProperty;
 use SMW\DIWikiPage;
 use SMW\Query\PrintRequest;
-use SMW\QueryFactory;
 use SMW\Services\ServicesFactory as ApplicationFactory;
+use SMW\SQLStore\QueryEngine\QuerySegment;
 use SMW\SQLStore\QueryEngineFactory;
 use SMW\SQLStore\SQLStore;
 use SMW\SQLStore\TableBuilder\FieldType;
 use SMWDataItem as DataItem;
-use SMWPrintRequest;
 use SMWQueryProcessor;
+use SRF\DataTables;
 
 class SearchPanes {
 
-	/** @var array */
-	private $searchPanesLog = [];
+	private array $searchPanesLog = [];
 
-	private $queryEngineFactory;
-
-	private $datatables;
+	private ?QueryEngineFactory $queryEngineFactory = null;
 
 	private $connection;
 
-	private $queryFactory;
-
-	public function __construct( $datatables ) {
-		$this->datatables = $datatables;
+	public function __construct(
+		private DataTables $datatables
+	) {
 	}
 
-	/**
-	 * @param array $printRequests
-	 * @param array $searchPanesOptions
-	 * @return array
-	 */
-	public function getSearchPanes( $printRequests, $searchPanesOptions ) {
+	public function getSearchPanes( array $printRequests, array $searchPanesOptions ): array {
 		if ( $this->datatables->store instanceof \SMW\SPARQLStore\SPARQLStore ) {
 			// we got a SPARQLStore, which is not subclass of SQLStore
 			// dirty hack to access the private member baseStore, which is an instance of SQLStore
@@ -60,7 +51,6 @@ class SearchPanes {
 		}
 		$this->queryEngineFactory = new QueryEngineFactory( $this->datatables->store );
 		$this->connection = $this->datatables->store->getConnection( 'mw.db.queryengine' );
-		$this->queryFactory = new QueryFactory();
 
 		$ret = [];
 		foreach ( $printRequests as $i => $printRequest ) {
@@ -77,7 +67,7 @@ class SearchPanes {
 				continue;
 			}
 
-			$canonicalLabel = ( $printRequest->getMode() !== SMWPrintRequest::PRINT_THIS ?
+			$canonicalLabel = ( $printRequest->getMode() !== PrintRequest::PRINT_THIS ?
 				$printRequest->getCanonicalLabel() : '' );
 
 			$ret[$i] = $this->getPanesOptions( $printRequest, $canonicalLabel, $searchPanesOptions, $searchPanesParameterOptions );
@@ -86,21 +76,16 @@ class SearchPanes {
 		return $ret;
 	}
 
-	/**
-	 * @return array
-	 */
-	public function getLog() {
+	public function getLog(): array {
 		return $this->searchPanesLog;
 	}
 
-	/**
-	 * @param PrintRequest $printRequest
-	 * @param string $canonicalLabel
-	 * @param array $searchPanesOptions
-	 * @param array $searchPanesParameterOptions
-	 * @return array
-	 */
-	private function getPanesOptions( $printRequest, $canonicalLabel, $searchPanesOptions, $searchPanesParameterOptions ) {
+	private function getPanesOptions(
+		PrintRequest $printRequest,
+		string $canonicalLabel,
+		array $searchPanesOptions,
+		array $searchPanesParameterOptions
+	): array {
 		if ( empty( $canonicalLabel ) ) {
 			return $this->searchPanesMainlabel( $printRequest, $searchPanesOptions, $searchPanesParameterOptions );
 		}
@@ -139,7 +124,7 @@ class SearchPanes {
 
 		$rootid = $conditionBuilder->buildCondition( $newQuery );
 
-		\SMW\SQLStore\QueryEngine\QuerySegment::$qnum = 0;
+		QuerySegment::$qnum = 0;
 		$querySegmentList = $conditionBuilder->getQuerySegmentList();
 
 		$querySegmentListProcessor = $this->queryEngineFactory->newQuerySegmentListProcessor();
@@ -152,7 +137,7 @@ class SearchPanes {
 		$qobj = $querySegmentList[$rootid];
 
 		$property = new DIProperty( DIProperty::newFromUserLabel( $printRequest->getCanonicalLabel() ) );
-		$propTypeid = $property->findPropertyTypeID();
+		$propTypeid = $property->findPropertyValueType();
 
 		if ( $isCategory ) {
 
@@ -315,7 +300,7 @@ class SearchPanes {
 		}
 
 		// @see ByGroupPropertyValuesLookup
-		$diType = DataTypeRegistry::getInstance()->getDataItemId(
+		$diType = DataTypeRegistry::getInstance()->getDataItemByType(
 			$propTypeid
 		);
 
@@ -394,7 +379,7 @@ class SearchPanes {
 				$outputMode,
 				$isSubject,
 				$propTypeid
-			);
+			)['display'];
 
 			if ( !array_key_exists( $cellContent, $groups ) ) {
 				$groups[$cellContent] = [ 'count' => 0, 'value' => '' ];
@@ -537,12 +522,8 @@ class SearchPanes {
 
 	/**
 	 * @see ByGroupPropertyValuesLookup
-	 * @param DIProperty $property
-	 * @param string $p_alias
-	 * @param string $propTypeId
-	 * @return array
 	 */
-	private function fetchValuesByGroup( DIProperty $property, $p_alias, $propTypeId ) {
+	private function fetchValuesByGroup( DIProperty $property, string $p_alias, string $propTypeId ): array {
 		$tableid = $this->datatables->store->findPropertyTableID( $property );
 		// $entityIdManager = $this->store->getObjectIds();
 
@@ -619,13 +600,7 @@ class SearchPanes {
 		return [ $diType, $isIdField, $fields, $groupBy, $orderBy ];
 	}
 
-	/**
-	 * @param PrintRequest $printRequest
-	 * @param array $searchPanesOptions
-	 * @param array $searchPanesParameterOptions
-	 * @return array
-	 */
-	private function searchPanesMainlabel( $printRequest, $searchPanesOptions, $searchPanesParameterOptions ) {
+	private function searchPanesMainlabel( PrintRequest $printRequest, array $searchPanesOptions, array $searchPanesParameterOptions ): array {
 		// mainlabel consists only of unique values,
 		// so do not display if settings don't allow that
 		if ( $searchPanesOptions['minCount'] > 1 ) {
@@ -651,7 +626,7 @@ class SearchPanes {
 		$conditionBuilder = $this->queryEngineFactory->newConditionBuilder();
 		$rootid = $conditionBuilder->buildCondition( $query );
 
-		\SMW\SQLStore\QueryEngine\QuerySegment::$qnum = 0;
+		QuerySegment::$qnum = 0;
 		$querySegmentList = $conditionBuilder->getQuerySegmentList();
 
 		$querySegmentListProcessor = $this->queryEngineFactory->newQuerySegmentListProcessor();
@@ -720,7 +695,7 @@ class SearchPanes {
 				[ $dataValue ],
 				$outputMode,
 				$isSubject
-			);
+			)['display'];
 
 			if ( !array_key_exists( $cellContent, $groups ) ) {
 				$groups[$cellContent] = [ 'count' => 0, 'value' => '' ];
