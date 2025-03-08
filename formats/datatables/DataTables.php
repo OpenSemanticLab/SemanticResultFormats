@@ -914,7 +914,7 @@ class DataTables extends ResultPrinter {
 	/**
 	 * @see SMW\Query\ResultPrinters\TableResultPrinter
 	 */
-	private function getCellContent(
+	public function getCellContent(
 		string $label,
 		array $dataValues,
 		int $outputMode,
