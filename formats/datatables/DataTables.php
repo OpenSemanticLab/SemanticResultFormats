@@ -581,9 +581,20 @@ class DataTables extends ResultPrinter {
 		// for the order @see https://github.com/SemanticMediaWiki/SemanticResultFormats/issues/825
 		$result = $this->getResultJson( $res, $outputmode );
 
-		// @TODO use only one between printouts and printrequests
-		$resultArray = $res->toArray();
-		$printrequests = $resultArray['printrequests'];
+		// Build printrequests array directly from PrintRequest objects
+		// instead of $res->toArray() which crashes on SMWDIError items
+		// (SMWDIError::getSemanticData() does not exist)
+		$printrequests = [];
+		foreach ( $res->getPrintRequests() as $printRequest ) {
+			$printrequests[] = [
+				'label' => $printRequest->getLabel(),
+				'key' => $printRequest->getCanonicalLabel(),
+				'redi' => '',
+				'typeid' => $printRequest->getTypeID(),
+				'mode' => $printRequest->getMode(),
+				'format' => $printRequest->getOutputFormat() ?: false,
+			];
+		}
 
 		$this->htmlTable = new HtmlTable();
 		foreach ( $headerList as $text ) {
