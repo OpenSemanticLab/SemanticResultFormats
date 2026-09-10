@@ -91,6 +91,34 @@ class SearchPanes {
 		return $querySegmentListProcessor;
 	}
 
+	/**
+	 * SMW 7 removed Database::select(); the query engine parts this class builds
+	 * are raw SQL fragments, so they are handed to the select query builder as
+	 * they are.
+	 *
+	 * @param array $tables
+	 * @param array|string $fields
+	 * @param array|string $conds
+	 * @param string $fname
+	 * @param array $options
+	 * @param array $joins
+	 * @return \Wikimedia\Rdbms\IResultWrapper
+	 */
+	private function selectRows( $tables, $fields, $conds, $fname, $options, $joins ) {
+		$builder = $this->connection->newSelectQueryBuilder()
+			->tables( (array)$tables )
+			->fields( $fields )
+			->options( $options )
+			->joinConds( $joins )
+			->caller( $fname );
+
+		if ( $conds !== '' && $conds !== [] ) {
+			$builder->where( $conds );
+		}
+
+		return $builder->fetchResultSet();
+	}
+
 	public function getSearchPanes( array $printRequests, array $searchPanesOptions ): array {
 		if ( $this->datatables->store instanceof \SMW\SPARQLStore\SPARQLStore ) {
 			// SPARQLStore wraps an SQLStore as baseStore (public since SMW 6.x)
@@ -224,14 +252,7 @@ class SearchPanes {
 			$joins_ = $joins;
 			$joins_['insts'] = [ 'JOIN', [ "$qobj->alias.smw_id = insts.s_id" ] ];
 
-			$res = $this->connection->select(
-				$tables_,
-				$fields_,
-				$conds_,
-				__METHOD__,
-				$sql_options_,
-				$joins_
-			);
+			$res = $this->selectRows( $tables_, $fields_, $conds_, __METHOD__, $sql_options_, $joins_ );
 
 			$dataLength = $res ? (int)( $res->fetchRow()['count'] ?? 0 ) : 0;
 
@@ -268,14 +289,7 @@ class SearchPanes {
 			$conds_ = $conds;
 			$fields_ = "COUNT($groupBy) AS count, i.smw_id, i.smw_title, i.smw_namespace, i.smw_iw, i.smw_sort, i.smw_subobject";
 
-			$res = $this->connection->select(
-				$tables_,
-				$fields_,
-				$conds_,
-				__METHOD__,
-				$sql_options_,
-				$joins_
-			);
+			$res = $this->selectRows( $tables_, $fields_, $conds_, __METHOD__, $sql_options_, $joins_ );
 
 			$isIdField = true;
 
@@ -313,14 +327,7 @@ class SearchPanes {
 			$conds_ = $conds;
 			$joins_ = $joins;
 
-			$res = $this->connection->select(
-				$tables_,
-				$fields_,
-				$conds_,
-				__METHOD__,
-				$sql_options_,
-				$joins_
-			);
+			$res = $this->selectRows( $tables_, $fields_, $conds_, __METHOD__, $sql_options_, $joins_ );
 
 			$dataLength = $res ? (int)( $res->fetchRow()['count'] ?? 0 ) : 0;
 
@@ -362,14 +369,7 @@ class SearchPanes {
 				$conds_ .= ' AND i.smw_iw != ' . $this->connection->addQuotes( SMW_SQL3_SMWDELETEIW );
 			}
 
-			$res = $this->connection->select(
-				$tables_,
-				$fields_,
-				$conds_,
-				__METHOD__,
-				$sql_options_,
-				$joins_
-			);
+			$res = $this->selectRows( $tables_, $fields_, $conds_, __METHOD__, $sql_options_, $joins_ );
 		}
 
 		// verify uniqueRatio
@@ -776,14 +776,7 @@ class SearchPanes {
 		$conds_ = $conds;
 		$joins_ = $joins;
 
-		$res = $this->connection->select(
-			$tables_,
-			$fields_,
-			$conds_,
-			__METHOD__,
-			$sql_options_,
-			$joins_
-		);
+		$res = $this->selectRows( $tables_, $fields_, $conds_, __METHOD__, $sql_options_, $joins_ );
 
 		$diHandler = $this->datatables->store->getDataItemHandlerForDIType(
 			DataItem::TYPE_WIKIPAGE
