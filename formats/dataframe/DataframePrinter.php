@@ -55,7 +55,7 @@ class DataframePrinter extends FileExportPrinter {
 	 *
 	 * @return string
 	 */
-	public function getFileName( QueryResult $queryResult ) {
+	public function getFileName( QueryResult $queryResult ): string|false {
 		return ( $this->params[ 'filename' ] ?: base_convert( uniqid(), 16, 36 ) ) . $this->fileFormat[ 'extension' ];
 	}
 
@@ -65,7 +65,7 @@ class DataframePrinter extends FileExportPrinter {
 	 * @param QueryResult $queryResult
 	 * @param array $params
 	 */
-	public function outputAsFile( QueryResult $queryResult, array $params ) {
+	public function outputAsFile( QueryResult $queryResult, array $params ): void {
 		$this->fileFormat = $this->fileFormats[ 'R' ];
 		parent::outputAsFile( $queryResult, $params );
 	}
@@ -76,7 +76,7 @@ class DataframePrinter extends FileExportPrinter {
 	 *
 	 * @return array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$definitions[ 'searchlabel' ]->setDefault( wfMessage( 'srf-dataframe-link' )->inContentLanguage()->text() );
@@ -101,7 +101,6 @@ class DataframePrinter extends FileExportPrinter {
 
 	/**
 	 * Return serialised results in specified format.
-	 *
 	 */
 	protected function getResultText( QueryResult $queryResult, $outputMode ) {
 		if ( $outputMode === SMW_OUTPUT_FILE ) {
@@ -134,7 +133,8 @@ class DataframePrinter extends FileExportPrinter {
 		}
 
 		$cols = [];
-		while ( $resultRow = $queryResult->getNext() ) {
+		$resultRow = $queryResult->getNext();
+		while ( $resultRow !== false ) {
 
 			foreach ( $resultRow as $resultField ) {
 				$propertyLabel = $resultField->getPrintRequest()->getLabel();
@@ -144,8 +144,10 @@ class DataframePrinter extends FileExportPrinter {
 				if ( count( $dataItems ) > 1 ) {
 					$values = [];
 
-					while ( $value = $resultField->getNextText( SMW_OUTPUT_FILE ) ) {
+					$value = $resultField->getNextText( SMW_OUTPUT_FILE );
+					while ( $value !== false ) {
 						$values[] = $value;
+						$value = $resultField->getNextText( SMW_OUTPUT_FILE );
 					}
 					$rowData = "'" . implode( ', ', $values ) . "'";
 				} else {
@@ -168,6 +170,7 @@ class DataframePrinter extends FileExportPrinter {
 				// $cols[$propertyLabel][$subjectLabel][] = $rowData;
 				$cols[$propertyLabel][][] = $rowData;
 			}
+			$resultRow = $queryResult->getNext();
 		}
 
 		/*

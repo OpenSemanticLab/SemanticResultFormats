@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Html\Html;
 use SMW\Query\ResultPrinters\AggregatablePrinter;
 
 /**
@@ -15,7 +16,6 @@ class SRFSparkline extends AggregatablePrinter {
 
 	/**
 	 * Corresponding message name
-	 *
 	 */
 	public function getName() {
 		return wfMessage( 'srf-printername-sparkline' )->text();
@@ -90,7 +90,7 @@ class SRFSparkline extends AggregatablePrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['min'] = [

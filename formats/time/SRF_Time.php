@@ -59,8 +59,7 @@ class SRFTime extends ResultPrinter {
 	protected function getSortKeys( QueryResult $res ) {
 		$seconds = [];
 
-		while ( $row = $res->getNext() ) {
-			/* \SMW\Query\Result\ResultArray */
+		while ( $row = $res->getNext() ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 			foreach ( $row as
 					  $resultArray ) {
 				/* SMWDataItem */
@@ -85,7 +84,7 @@ class SRFTime extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['limit'] = [

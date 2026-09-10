@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Html\Html;
 use SMW\Query\QueryResult;
 use SMW\Query\ResultPrinters\ResultPrinter;
 
@@ -58,9 +59,8 @@ class SRFTimeseries extends ResultPrinter {
 		$values = [];
 		$aggregatedValues = [];
 
-		while (
-		/* array of \SMW\Query\Result\ResultArray */
-		$row = $result->getNext() ) {
+		// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+		while ( $row = $result->getNext() ) {
 			$timeStamp = '';
 			$series = [];
 			/* \SMW\Query\Result\ResultArray */
@@ -74,10 +74,8 @@ class SRFTimeseries extends ResultPrinter {
 				} else {
 					$group = $field->getPrintRequest()->getLabel();
 				}
-				/* SMWDataValue */
-				while ( (
-					// Data values
-					$dataValue = $field->getNextDataValue() ) !== false ) {
+				// phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+				while ( ( $dataValue = $field->getNextDataValue() ) !== false ) {
 
 					// Find the timestamp
 					if ( $dataValue->getDataItem()->getDIType() == SMWDataItem::TYPE_TIME ) {
@@ -95,8 +93,7 @@ class SRFTimeseries extends ResultPrinter {
 				$rowSum = array_sum( $sum );
 
 				// Check the sum and threshold/min
-				if ( $timeStamp !== '' && $field->getPrintRequest()->getTypeID(
-					) !== '_dat' && $rowSum >= $this->params['min'] ) {
+				if ( $timeStamp !== '' && $field->getPrintRequest()->getTypeID() !== '_dat' && $rowSum >= $this->params['min'] ) {
 					$series[$group] = [ $timeStamp, $rowSum ];
 				}
 			}
@@ -203,7 +200,7 @@ class SRFTimeseries extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['charttype'] = [

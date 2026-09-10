@@ -11,12 +11,12 @@ namespace SRF\Filtered\View;
  * @ingroup SemanticResultFormats
  */
 
-use Html;
+use MediaWiki\Html\Html;
+use MediaWiki\Xml\Xml;
 use Message;
 use SMW\Query\PrintRequest;
 use SMW\Query\Result\ResultArray;
 use SRF\Filtered\ResultItem;
-use Xml;
 
 /**
  * The TableView class defines the Table view.
@@ -87,7 +87,7 @@ class TableView extends View {
 		$queryResults = $this->getQueryResults();
 		$queryResultValue = reset( $queryResults );
 
-		if ( !is_a( $queryResultValue, ResultItem::class ) ) {
+		if ( !( $queryResultValue instanceof ResultItem ) ) {
 			return '';
 		}
 
@@ -195,7 +195,7 @@ class TableView extends View {
 
 		$dataValues = [];
 
-		while ( ( $dataValue = $resultArray->getNextDataValue() ) !== false ) {
+		while ( ( $dataValue = $resultArray->getNextDataValue() ) !== false ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 			$dataValues[] = $dataValue;
 		}
 

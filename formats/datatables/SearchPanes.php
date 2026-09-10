@@ -118,6 +118,7 @@ class SearchPanes {
 			$canonicalLabel = ( $printRequest->getMode() !== PrintRequest::PRINT_THIS ?
 				$printRequest->getCanonicalLabel() : '' );
 
+			// @credits simontaurus
 			// getPanesOptions generates SQL for the facet pre-compute. For some query shapes
 			// (multi-valued properties, language modifiers, large result sets) the generator
 			// emits SQL that references undeclared aliases (e.g. "ON t11.s_id=..." with no t11
@@ -449,7 +450,7 @@ class SearchPanes {
 				// @see SMWExportController
 				try {
 					$redirectTarget = $deepRedirectTargetResolver->findRedirectTargetFor( $dataItem->getTitle() );
-				} catch ( \Exception $e ) {
+				} catch ( \Exception ) {
 				}
 				if ( $redirectTarget ) {
 					$dataItem = DIWikiPage::newFromTitle( $redirectTarget );

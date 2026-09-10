@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Title\Title;
 use SMW\Query\QueryResult;
 use SMW\Query\ResultPrinters\ResultPrinter;
 
@@ -66,7 +67,7 @@ class SRFProcess extends ResultPrinter {
 	 * (non-PHPdoc)
 	 * @see ResultPrinter::handleParameters()
 	 */
-	protected function handleParameters( array $params, $outputmode ) {
+	protected function handleParameters( array $params, $outputmode ): void {
 		parent::handleParameters( $params, $outputmode );
 
 		// init process graph instance
@@ -101,7 +102,7 @@ class SRFProcess extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['graphname'] = [
@@ -200,7 +201,6 @@ class SRFProcess extends ResultPrinter {
 	 *
 	 *
 	 * @return string rendered HTML output of this printer for the ask-query
-	 *
 	 */
 	protected function getResultText( QueryResult $res, $outputmode ) {
 		if ( !ExtensionRegistry::getInstance()->isLoaded( 'Diagrams' ) &&
@@ -209,7 +209,8 @@ class SRFProcess extends ResultPrinter {
 			return '';
 		}
 
-		global $wgContLang; // content language object
+		// content language object
+		global $wgContLang;
 
 		//
 		//	GraphViz settings
@@ -694,7 +695,7 @@ class ProcessGraph {
 		$this->m_highlightNode = $name;
 	}
 
-	public function addError( $error ) {
+	public function addError( $error ): void {
 		$this->m_errors[] = $error;
 	}
 
@@ -980,20 +981,15 @@ class ProcessNode extends ProcessElement {
 			// $status = ',style=filled,color=' . $color;
 			if ( $this->getStatus() != '' ) {
 				if ( $this->getStatus() < 25 ) {
-					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus(
-						) . '%"><IMG SRC="' . $PicturePath . 'p000.png" /';
+					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus() . '%"><IMG SRC="' . $PicturePath . 'p000.png" /';
 				} elseif ( $this->getStatus() < 50 ) {
-					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus(
-						) . '%"><IMG SRC="' . $PicturePath . 'p025.png" /';
+					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus() . '%"><IMG SRC="' . $PicturePath . 'p025.png" /';
 				} elseif ( $this->getStatus() < 75 ) {
-					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus(
-						) . '%"><IMG SRC="' . $PicturePath . 'p050.png" /';
+					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus() . '%"><IMG SRC="' . $PicturePath . 'p050.png" /';
 				} elseif ( $this->getStatus() < 100 ) {
-					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus(
-						) . '%"><IMG SRC="' . $PicturePath . 'p075.png" /';
+					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus() . '%"><IMG SRC="' . $PicturePath . 'p075.png" /';
 				} elseif ( $this->getStatus() == 100 ) {
-					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus(
-						) . '%"><IMG SRC="' . $PicturePath . 'p100.png" /';
+					$status = ' HREF="[[' . $this->getId() . ']]" TOOLTIP="status ' . $this->getStatus() . '%"><IMG SRC="' . $PicturePath . 'p100.png" /';
 				}
 			}
 
@@ -1014,11 +1010,9 @@ class ProcessNode extends ProcessElement {
 			}
 			$discussionTitle = Title::newFromText( 'Talk:' . $this->getId() . '' );
 			if ( $discussionTitle->isKnown() ) {
-				$discussion = ' HREF="[[Talk:' . $this->getId() . ']]" TOOLTIP="Talk:' . $this->getId(
-					) . '"><IMG SRC="' . $PicturePath . 'discuss_icon.png" /';
+				$discussion = ' HREF="[[Talk:' . $this->getId() . ']]" TOOLTIP="Talk:' . $this->getId() . '"><IMG SRC="' . $PicturePath . 'discuss_icon.png" /';
 			} else {
-				$discussion = ' HREF="[[Talk:' . $this->getId() . ']]" TOOLTIP="Talk:' . $this->getId(
-					) . '"><IMG SRC="' . $PicturePath . 'discuss_icon_grey.png" /';
+				$discussion = ' HREF="[[Talk:' . $this->getId() . ']]" TOOLTIP="Talk:' . $this->getId() . '"><IMG SRC="' . $PicturePath . 'discuss_icon_grey.png" /';
 			}
 
 		}
@@ -1040,8 +1034,7 @@ class ProcessNode extends ProcessElement {
 				$PicturePath = $IP . $srfgPicturePath;
 			}
 			if ( !$this->isAtomic() ) {
-				$compound = '<TR><TD ALIGN="LEFT" BORDER="0" WIDTH="20px" HREF="[[' . $this->getId(
-					) . ']]" TOOLTIP="sub process"><IMG SRC="' . $PicturePath . 'subprocess.png"/>';
+				$compound = '<TR><TD ALIGN="LEFT" BORDER="0" WIDTH="20px" HREF="[[' . $this->getId() . ']]" TOOLTIP="sub process"><IMG SRC="' . $PicturePath . 'subprocess.png"/>';
 			}
 		}
 
@@ -1050,14 +1043,11 @@ class ProcessNode extends ProcessElement {
 		//
 		if ( $this->m_process->m_useHtmlNodes ) {
 			$res =
-				'"' . $this->getId(
-				) . '" [shape=plaintext,label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">' . $compound . '</TD><TD BORDER="0" WIDTH="80%"></TD><TD ALIGN="RIGHT" BORDER="0" WIDTH="20px"' . $status . '></TD><TD ALIGN="RIGHT" BORDER="0" WIDTH="20px"' . $discussion . '></TD></TR><TR><TD COLSPAN="4" PORT="port1" HREF="[[' . $this->getId(
-				) . ']]" TOOLTIP="' . $this->getLabel() . '"><FONT' . $high . '>' . $this->getLabel() . '</FONT></TD> </TR></TABLE>>];
+				'"' . $this->getId() . '" [shape=plaintext,label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">' . $compound . '</TD><TD BORDER="0" WIDTH="80%"></TD><TD ALIGN="RIGHT" BORDER="0" WIDTH="20px"' . $status . '></TD><TD ALIGN="RIGHT" BORDER="0" WIDTH="20px"' . $discussion . '></TD></TR><TR><TD COLSPAN="4" PORT="port1" HREF="[[' . $this->getId() . ']]" TOOLTIP="' . $this->getLabel() . '"><FONT' . $high . '>' . $this->getLabel() . '</FONT></TD> </TR></TABLE>>];
 			';
 		} else {
 			$res =
-				'"' . $this->getId() . '"[label="' . $this->getLabel(
-				) . '",shape=rect, height=1.5, URL="[[' . $this->getId() . ']]"];
+				'"' . $this->getId() . '"[label="' . $this->getLabel() . '",shape=rect, height=1.5, URL="[[' . $this->getId() . ']]"];
 			';
 		}
 
@@ -1080,8 +1070,7 @@ class ProcessNode extends ProcessElement {
 			foreach ( $this->getRoles() as $role ) {
 				$rrcluster = true;
 				$rrcode .= '
-				"' . $role->getId() . '"[label="' . $role->getLabel(
-					) . '",shape=doubleoctagon, color=red, URL="[[' . $role->getId() . ']]"];
+				"' . $role->getId() . '"[label="' . $role->getLabel() . '",shape=doubleoctagon, color=red, URL="[[' . $role->getId() . ']]"];
 				"' . $role->getId() . '" -> "' . $this->getId() . '":port1 [color=red,arrowhead = none,constraint=false];
 				';
 
@@ -1093,8 +1082,7 @@ class ProcessNode extends ProcessElement {
 			foreach ( $this->getUsedRessources() as $xres ) {
 				$rrcluster = true;
 				$rrcode .= '
-			"' . $xres->getId() . '"[label="' . $xres->getLabel(
-					) . '",shape=folder, color=blue, URL="[[' . $xres->getId() . ']]"];
+			"' . $xres->getId() . '"[label="' . $xres->getLabel() . '",shape=folder, color=blue, URL="[[' . $xres->getId() . ']]"];
 			"' . $xres->getId() . '" -> "' . $this->getId() . '":port1 [color=blue,constraint=false];
 				';
 			}
@@ -1102,8 +1090,7 @@ class ProcessNode extends ProcessElement {
 			foreach ( $this->getProducedRessources() as $xres ) {
 				$rrcluster = true;
 				$rrcode .= '
-			"' . $xres->getId() . '"[label="' . $xres->getLabel(
-					) . '",shape=folder, color=blue, URL="[[' . $xres->getId() . ']]"];
+			"' . $xres->getId() . '"[label="' . $xres->getLabel() . '",shape=folder, color=blue, URL="[[' . $xres->getId() . ']]"];
 			"' . $this->getId() . '":port1 -> "' . $xres->getId() . '" [color=blue,constraint=false];
 				';
 			}

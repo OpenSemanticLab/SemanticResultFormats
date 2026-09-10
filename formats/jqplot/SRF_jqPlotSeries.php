@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Html\Html;
 use SMW\Query\QueryResult;
 use SMW\Query\ResultPrinters\ResultPrinter;
 
@@ -60,7 +61,8 @@ class SRFjqPlotSeries extends ResultPrinter {
 		$data = [];
 		$data['series'] = [];
 
-		while ( $row = $res->getNext() ) {
+		$row = $res->getNext();
+		while ( $row !== false ) {
 			// Loop over their fields (properties)
 			$label = '';
 			$i = 0;
@@ -84,9 +86,8 @@ class SRFjqPlotSeries extends ResultPrinter {
 				$i == 1 ? $data['fcolumntypeid'] = $field->getPrintRequest()->getTypeID() : '';
 
 				// Loop over all values for the property.
-				while ( (
-					/* SMWDataValue */
-					$object = $field->getNextDataValue() ) !== false ) {
+				$object = $field->getNextDataValue();
+				while ( $object !== false ) {
 
 					if ( $object->getDataItem()->getDIType() == SMWDataItem::TYPE_NUMBER ) {
 						$number = $object->getNumber();
@@ -97,6 +98,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 						// The first column container will not be part of the series container
 						if ( $i == 1 ) {
 							$label = $number;
+							$object = $field->getNextDataValue();
 							continue;
 						}
 
@@ -113,6 +115,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 					} else {
 						$label = $object->getWikiValue();
 					}
+					$object = $field->getNextDataValue();
 				}
 				// Only for array's with numbers
 				if ( count( $rowNumbers ) > 0 ) {
@@ -127,6 +130,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 					}
 				}
 			}
+			$row = $res->getNext();
 		}
 		return $data;
 	}
@@ -140,7 +144,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 	 *
 	 * @return array
 	 */
-	private function getFormatSettings( $data, $options ) {
+	private function getFormatSettings( $data, $options ): array {
 		// Init
 		$dataSet = [];
 		$options['mode'] = 'series';
@@ -195,7 +199,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 			'charttitle' => $this->params['charttitle'],
 			'charttext' => $this->params['charttext'],
 			'infotext' => $this->params['infotext'],
-			'theme' => $this->params['theme'] ? $this->params['theme'] : null,
+			'theme' => $this->params['theme'] ?: null,
 			'valueformat' => $this->params['datalabels'] === 'label' ? '' : $this->params['valueformat'],
 			'ticklabels' => $this->params['ticklabels'],
 			'highlighter' => $this->params['highlighter'],
@@ -203,7 +207,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 			'gridview' => $this->params['gridview'],
 			'direction' => $this->params['direction'],
 			'smoothlines' => $this->params['smoothlines'],
-			'cursor' => $this->params['cursor'],
+			'cursor' => $this->params['chartcursor'],
 			'chartlegend' => $this->params['chartlegend'] !== '' ? $this->params['chartlegend'] : 'none',
 			'colorscheme' => $this->params['colorscheme'] !== '' ? $this->params['colorscheme'] : null,
 			'pointlabels' => $this->params['datalabels'] === 'none' ? false : $this->params['datalabels'],
@@ -261,7 +265,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 	 * @since 1.8
 	 *
 	 *
-	 * @return string
+	 * @return void
 	 */
 	protected function addResources() {
 		// RL module
@@ -285,7 +289,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 		}
 
 		// Cursor plugin
-		if ( in_array( $this->params['cursor'], [ 'zoom', 'tooltip' ] ) ) {
+		if ( in_array( $this->params['chartcursor'], [ 'zoom', 'tooltip' ] ) ) {
 			SMWOutputs::requireResource( 'ext.srf.jqplot.cursor' );
 		}
 
@@ -372,7 +376,7 @@ class SRFjqPlotSeries extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = array_merge( parent::getParamDefinitions( $definitions ), SRFjqPlot::getCommonParams() );
 
 		$params['infotext'] = [
@@ -410,7 +414,9 @@ class SRFjqPlotSeries extends ResultPrinter {
 			'values' => [ 'none', 'exp', 'linear' ],
 		];
 
-		$params['cursor'] = [
+		// `cursor` is reserved by SMW >= 7.0 for keyset pagination tokens
+		// and must not be used as a format parameter name
+		$params['chartcursor'] = [
 			'message' => 'srf-paramdesc-chartcursor',
 			'default' => 'none',
 			'values' => [ 'none', 'zoom', 'tooltip' ],

@@ -59,7 +59,7 @@ class BibTexFileExportPrinter extends FileExportPrinter {
 	 *
 	 * {@inheritDoc}
 	 */
-	public function getFileName( QueryResult $queryResult ) {
+	public function getFileName( QueryResult $queryResult ): string|false {
 		if ( $this->params['filename'] !== '' ) {
 
 			if ( strpos( $this->params['filename'], '.bib' ) === false ) {
@@ -81,7 +81,7 @@ class BibTexFileExportPrinter extends FileExportPrinter {
 	 *
 	 * {@inheritDoc}
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['filename'] = [
@@ -116,7 +116,7 @@ class BibTexFileExportPrinter extends FileExportPrinter {
 
 		$items = [];
 
-		while ( $row = $res->getNext() ) {
+		while ( $row = $res->getNext() ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 			$items[] = $this->newItem( $row )->text();
 		}
 
@@ -163,7 +163,7 @@ class BibTexFileExportPrinter extends FileExportPrinter {
 			} elseif ( $label === 'author' || $label === 'authors' ) {
 				$values[] = $dataValue->getShortWikiText();
 
-				while ( ( $dataValue = $field->getNextDataValue() ) !== false ) {
+				while ( ( $dataValue = $field->getNextDataValue() ) !== false ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 					$values[] = $dataValue->getShortWikiText();
 				}
 
@@ -171,7 +171,7 @@ class BibTexFileExportPrinter extends FileExportPrinter {
 			} elseif ( $label === 'editor' || $label === 'editors' ) {
 				$values[] = $dataValue->getShortWikiText();
 
-				while ( ( $dataValue = $field->getNextDataValue() ) !== false ) {
+				while ( ( $dataValue = $field->getNextDataValue() ) !== false ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 					$values[] = $dataValue->getShortWikiText();
 				}
 

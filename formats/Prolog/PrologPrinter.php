@@ -59,7 +59,7 @@ class PrologPrinter extends FileExportPrinter {
 	 *
 	 * @return string
 	 */
-	public function getFileName( QueryResult $queryResult ) {
+	public function getFileName( QueryResult $queryResult ): string|false {
 		return ( $this->params[ 'filename' ] ?: base_convert( uniqid(), 16, 36 ) ) . $this->fileFormat[ 'extension' ];
 	}
 
@@ -69,7 +69,7 @@ class PrologPrinter extends FileExportPrinter {
 	 * @param QueryResult $queryResult
 	 * @param array $params
 	 */
-	public function outputAsFile( QueryResult $queryResult, array $params ) {
+	public function outputAsFile( QueryResult $queryResult, array $params ): void {
 		if ( array_key_exists( 'fileformat', $params ) && array_key_exists( $params[ 'fileformat' ]->getValue(), $this->fileFormats ) ) {
 			$this->fileFormat = $this->fileFormats[ $params[ 'fileformat' ]->getValue() ];
 		} else {
@@ -87,7 +87,7 @@ class PrologPrinter extends FileExportPrinter {
 	 *
 	 * {@inheritDoc}
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$definitions[ 'searchlabel' ]->setDefault( wfMessage( 'srf-prolog-link' )->inContentLanguage()->text() );
@@ -156,7 +156,8 @@ class PrologPrinter extends FileExportPrinter {
 			$res .= 'row.names=T, ';*/
 
 		$preds = [];
-		while ( $resultRow = $queryResult->getNext() ) {
+		$resultRow = $queryResult->getNext();
+		while ( $resultRow !== false ) {
 
 			$subject = '';
 			$i = 0;
@@ -172,8 +173,10 @@ class PrologPrinter extends FileExportPrinter {
 					if ( count( $dataItems ) > 1 ) {
 						$values = [];
 
-						while ( $value = $resultField->getNextText( SMW_OUTPUT_FILE ) ) {
+						$value = $resultField->getNextText( SMW_OUTPUT_FILE );
+						while ( $value !== false ) {
 							$values[] = $value;
+							$value = $resultField->getNextText( SMW_OUTPUT_FILE );
 						}
 						$rowData = "['" . implode( "', '", $values ) . "']";
 					} else {
@@ -196,6 +199,7 @@ class PrologPrinter extends FileExportPrinter {
 
 				$i++;
 			}
+			$resultRow = $queryResult->getNext();
 		}
 
 		$res = implode( "\n", $preds );

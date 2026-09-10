@@ -17,7 +17,7 @@ class SRFGoogleBar extends ResultPrinter {
 	 * (non-PHPdoc)
 	 * @see ResultPrinter::handleParameters()
 	 */
-	protected function handleParameters( array $params, $outputmode ) {
+	protected function handleParameters( array $params, $outputmode ): void {
 		parent::handleParameters( $params, $outputmode );
 
 		$this->m_width = $this->params['width'];
@@ -45,10 +45,12 @@ class SRFGoogleBar extends ResultPrinter {
 		// the biggest value. needed for scaling
 		$max = 0;
 
-		while ( $row = $res->getNext() ) {
+		$row = $res->getNext();
+		while ( $row !== false ) {
 			$name = $row[0]->getNextDataValue()->getShortWikiText();
 			foreach ( $row as $field ) {
-				while ( ( $object = $field->getNextDataValue() ) !== false ) {
+				$object = $field->getNextDataValue();
+				while ( $object !== false ) {
 
 					// use numeric sortkey
 					if ( $object->isNumeric() ) {
@@ -67,8 +69,10 @@ class SRFGoogleBar extends ResultPrinter {
 							$n .= '|' . $name;
 						}
 					}
+					$object = $field->getNextDataValue();
 				}
 			}
+			$row = $res->getNext();
 		}
 		// width of each bar
 		$barwidth = 20;
@@ -89,7 +93,7 @@ class SRFGoogleBar extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['width'] = [

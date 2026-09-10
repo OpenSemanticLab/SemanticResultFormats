@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Html\Html;
 use SMW\Query\PrintRequest;
 use SMW\Query\QueryResult;
 use SMW\Query\ResultPrinters\ResultPrinter;
@@ -81,10 +82,10 @@ class SRFValueRank extends ResultPrinter {
 		 *
 		 * @return array
 		 */
-		while ( $row = $results->getNext() ) {
+		while ( $row = $results->getNext() ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 			// \SMW\Query\Result\ResultArray for a sinlge property
 			for ( $i = 0, $n = count( $row ); $i < $n; $i++ ) {
-				while ( ( $dataValue = $row[$i]->getNextDataValue() ) !== false ) {
+				while ( ( $dataValue = $row[$i]->getNextDataValue() ) !== false ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 
 					$isSubject = $row[$i]->getPrintRequest()->getMode() == PrintRequest::PRINT_THIS;
 
@@ -212,7 +213,7 @@ class SRFValueRank extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['includesubject'] = [

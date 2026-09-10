@@ -1,5 +1,6 @@
 <?php
 
+use MediaWiki\Title\Title;
 use SMW\Query\QueryResult;
 use SMW\Query\ResultPrinters\ResultPrinter;
 
@@ -61,7 +62,7 @@ class SRFJitGraph extends ResultPrinter {
 
 	protected $debug_out = '';
 
-	protected function handleParameters( array $params, $outputmode ) {
+	protected function handleParameters( array $params, $outputmode ): void {
 		parent::handleParameters( $params, $outputmode );
 
 		if ( array_key_exists( 'graphname', $params ) ) {
@@ -160,12 +161,11 @@ class SRFJitGraph extends ResultPrinter {
 		$json = "[";
 		$jsonLeafs = "";
 
-		while ( $row = $res->getNext() ) {
-
+		while ( $row = $res->getNext() ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 			$firstcol = true;
 
 			foreach ( $row as $field ) {
-				while ( ( $object = $field->getNextDataValue() ) !== false ) {
+				while ( ( $object = $field->getNextDataValue() ) !== false ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
 					$text = $object->getShortText( $outputmode );
 
 					$nodeLinkTitle = Title::newFromText( $text );
@@ -291,7 +291,7 @@ class SRFJitGraph extends ResultPrinter {
 		foreach ( $this->m_settings as $key => $value ) {
 			$userSettings .= "\"$key\": \"$value\",";
 		}
-		substr( $userSettings, 0, -1 );
+		$userSettings = substr( $userSettings, 0, -1 );
 		$userSettings .= "};";
 
 		$result .= '<div id="center-container" class="className"><span class="progressBar" id="progress-' . $d_id . '">0%</span><div id="' . $this->m_settings['divID'] . '" class="infovis"></div>' . '' . '</div>';
@@ -313,7 +313,7 @@ class SRFJitGraph extends ResultPrinter {
 	}
 
 	protected function includeJS() {
-		SMWOutputs::requireHeadItem( SMW_HEADER_STYLE );
+		SMWOutputs::requireStyle( 'ext.smw.styles' );
 
 		// $wgOut->addModules( 'ext.srf.jitgraph' );
 
@@ -350,7 +350,7 @@ class SRFJitGraph extends ResultPrinter {
 	 *
 	 * @return array of IParamDefinition|array
 	 */
-	public function getParamDefinitions( array $definitions ) {
+	public function getParamDefinitions( array $definitions ): array {
 		$params = parent::getParamDefinitions( $definitions );
 
 		$params['graphname'] = [
