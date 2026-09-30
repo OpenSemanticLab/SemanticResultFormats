@@ -586,14 +586,36 @@ class DataTables extends ResultPrinter {
 		// (SMWDIError::getSemanticData() does not exist)
 		$printrequests = [];
 		foreach ( $res->getPrintRequests() as $printRequest ) {
-			$printrequests[] = [
+			$entry = [
 				'label' => $printRequest->getLabel(),
-				'key' => $printRequest->getCanonicalLabel(),
+				'key' => '',
 				'redi' => '',
 				'typeid' => $printRequest->getTypeID(),
 				'mode' => $printRequest->getMode(),
 				'format' => $printRequest->getOutputFormat() ?: false,
 			];
+
+			// 'key' stays empty for anything that is not a property, matching
+			// QueryResultSerializer::serialize_printrequest. A non-empty key makes
+			// the client treat the column as sortable and searchable by that name,
+			// so filling it for the mainlabel sorts on a property that cannot exist
+			// and the query returns nothing.
+			$data = $printRequest->getData();
+
+			if ( $printRequest->isMode( PrintRequest::PRINT_CHAIN ) ) {
+				$entry['chain'] = $data->getDataItem()->getString();
+				$entry['key'] = $data->getLastPropertyChainValue()->getDataItem()->getKey();
+			}
+
+			if ( $printRequest->isMode( PrintRequest::PRINT_PROP ) && $data !== null ) {
+				// To match forwarded redirects
+				if ( !$data->getInceptiveProperty()->equals( $data->getDataItem() ) ) {
+					$entry['redi'] = $data->getInceptiveProperty()->getKey();
+				}
+				$entry['key'] = $data->getDataItem()->getKey();
+			}
+
+			$printrequests[] = $entry;
 		}
 
 		$this->htmlTable = new HtmlTable();
