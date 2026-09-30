@@ -166,7 +166,7 @@ class DataTables extends ResultPrinter {
 		$params['datatables-scrollX'] = [
 			'type' => 'boolean',
 			'message' => 'srf-paramdesc-datatables-library-option',
-			'default' => false,
+			'default' => true,
 		];
 
 		$params['datatables-scrollY'] = [
@@ -256,7 +256,7 @@ class DataTables extends ResultPrinter {
 		$params['datatables-responsive'] = [
 			'type' => 'boolean',
 			'message' => 'srf-paramdesc-datatables-library-option',
-			'default' => true,
+			'default' => false,
 		];
 
 		$params['datatables-keys'] = [
