@@ -19,6 +19,7 @@ use MWException;
 use Parser;
 use RequestContext;
 use SMW\DataValues\PropertyValue;
+use SMW\DataValues\TimeValue;
 use SMW\DIWikiPage;
 use SMW\Localizer\Message;
 use SMW\Parser\RecursiveTextProcessor;
@@ -1091,10 +1092,17 @@ class DataTables extends ResultPrinter {
 
 		// $dataValues could be empty
 		$sortKey = array_key_exists( 0, $dataValues ) ? $dataValues[0]->getDataItem()->getSortKey() : '';
+		$filterKey = $sortKey;
+
+		// the sort key of a date is a Julian day number, which no filter can be
+		// expressed against, so filtering uses the ISO 8601 date instead
+		if ( array_key_exists( 0, $dataValues ) && $dataValues[0] instanceof TimeValue ) {
+			$filterKey = explode( 'T', $dataValues[0]->getISO8601Date() )[0];
+		}
 
 		return [
 			'display' => $html,
-			'filter' => $sortKey,
+			'filter' => $filterKey,
 			'sort' => $sortKey
 		];
 	}
