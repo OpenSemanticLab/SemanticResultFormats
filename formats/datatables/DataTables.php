@@ -18,6 +18,7 @@ use Mediawiki\Title\Title;
 use MWException;
 use Parser;
 use RequestContext;
+use SMW\DataValues\NumberValue;
 use SMW\DataValues\PropertyValue;
 use SMW\DataValues\TimeValue;
 use SMW\DIWikiPage;
@@ -1144,14 +1145,15 @@ class DataTables extends ResultPrinter {
 		}
 
 		// $dataValues could be empty
-		$sortKey = array_key_exists( 0, $dataValues ) ? $dataValues[0]->getDataItem()->getSortKey() : '';
+		$dataValue = $dataValues[0] ?? null;
+		$sortKey = $dataValue !== null ? $dataValue->getDataItem()->getSortKey() : '';
 		$filterKey = $sortKey;
 
 		// the sort key of a date is a Julian day number, which no filter can be
 		// expressed against, so filtering uses the ISO 8601 date instead, with
 		// the time only where the column asked for the moment conditions
-		if ( array_key_exists( 0, $dataValues ) && $dataValues[0] instanceof TimeValue ) {
-			$iso = $dataValues[0]->getISO8601Date();
+		if ( $dataValue instanceof TimeValue ) {
+			$iso = $dataValue->getISO8601Date();
 
 			if ( self::hasMomentSearchBuilderType( $printRequestParameters ) ) {
 				$filterKey = strpos( $iso, 'T' ) !== false
@@ -1159,6 +1161,16 @@ class DataTables extends ResultPrinter {
 					: $iso . ' 00:00:00';
 			} else {
 				$filterKey = explode( 'T', $iso )[0];
+			}
+		} elseif ( $dataValue instanceof NumberValue ) {
+			// the sort key of a quantity or a temperature is the value in the
+			// canonical unit, filtering uses the value in the unit the cell is
+			// displayed in, which is the one the caption is built from
+			$unitValues = $dataValue->getConvertedUnitValues();
+			$displayUnit = $dataValue->getCanonicalMainUnit();
+
+			if ( array_key_exists( $displayUnit, $unitValues ) ) {
+				$filterKey = $unitValues[$displayUnit];
 			}
 		}
 
