@@ -12,6 +12,9 @@
 namespace SRF\DataTables;
 
 use ApiBase;
+use DateInterval;
+use DateTimeImmutable;
+use DateTimeZone;
 use ParamProcessor\ParamDefinitionFactory;
 use SMW\DataValueFactory;
 use SMW\DataValues\PropertyChainValue;
@@ -189,7 +192,11 @@ class Api extends ApiBase {
 					// @FIXME $label isn't simply $value[1] ?
 					$printrequest = $printrequests[$key];
 					$label = ( $printrequest['key'] !== '' ? $value[1] : '' );
-					if ( $label === $criteria['data'] ) {
+
+					// SearchBuilder names a column by its title, which is the
+					// printout label, while the query condition needs the
+					// property name
+					if ( ( $printrequest['label'] ?? $label ) === $criteria['data'] ) {
 
 						// nested condition, skip for now
 						if ( !array_key_exists( 'condition', $criteria ) ) {
@@ -197,6 +204,16 @@ class Api extends ApiBase {
 						}
 						$v = implode( $criteria['value'] );
 						$str = ( $label !== '' ? "$label::" : '' );
+
+						if ( $label !== '' && ( $printrequest['typeid'] ?? '' ) === '_dat' ) {
+							$dateCondition = self::dateCondition( $label, $criteria );
+
+							if ( $dateCondition !== null ) {
+								$searchBuilder[] = $dateCondition;
+								continue;
+							}
+						}
+
 						switch ( $criteria['condition'] ) {
 							case '=':
 								$searchBuilder[] = "[[{$str}{$v}]]";
@@ -311,6 +328,110 @@ class Api extends ApiBase {
 		}
 
 		$this->getResult()->addValue( null, "datatables-json", $ret );
+	}
+
+	/**
+	 * Translates a SearchBuilder criteria on a date column into a query
+	 * condition. In the browser the criteria is compared against the filter
+	 * key built by SRF\DataTables::getCellContent, which is the ISO 8601 day
+	 * or, for a column using the moment conditions, the ISO 8601 second. The
+	 * query reproduces that by bounding the range to the same granularity.
+	 *
+	 * Only the strict comparators are used, so that the result does not depend
+	 * on $smwgStrictComparators.
+	 *
+	 * @param string $label
+	 * @param array $criteria
+	 * @return string|null null when the criteria carries no usable date
+	 */
+	private static function dateCondition( string $label, array $criteria ): ?string {
+		$bounds = [];
+
+		foreach ( $criteria['value'] ?? [] as $value ) {
+			$bound = self::dateBounds( (string)$value );
+
+			if ( $bound === null ) {
+				return null;
+			}
+
+			$bounds[] = $bound;
+		}
+
+		$single = $bounds[0] ?? null;
+
+		switch ( $criteria['condition'] ) {
+			case '=':
+				return $single !== null
+					? "[[$label::>>{$single['before']}]][[$label::<<{$single['after']}]]"
+					: null;
+
+			case '!=':
+				return $single !== null
+					? "[[$label::<<{$single['start']}||>>{$single['end']}]]"
+					: null;
+
+			case '<':
+				return $single !== null ? "[[$label::<<{$single['start']}]]" : null;
+
+			case '>':
+				return $single !== null ? "[[$label::>>{$single['end']}]]" : null;
+
+			case 'between':
+			case '!between':
+				if ( count( $bounds ) < 2 ) {
+					return null;
+				}
+
+				// SearchBuilder accepts the two values in either order
+				[ $from, $to ] = $bounds[0]['start'] <= $bounds[1]['start']
+					? [ $bounds[0], $bounds[1] ]
+					: [ $bounds[1], $bounds[0] ];
+
+				return $criteria['condition'] === 'between'
+					? "[[$label::>>{$from['before']}]][[$label::<<{$to['after']}]]"
+					: "[[$label::<<{$from['start']}||>>{$to['end']}]]";
+		}
+
+		return null;
+	}
+
+	/**
+	 * First and last instant of the day or second a filter key stands for,
+	 * plus the instant immediately outside either end.
+	 *
+	 * @param string $value
+	 * @return array|null null when the value is not a filter key of a date column
+	 */
+	private static function dateBounds( string $value ): ?array {
+		$value = trim( $value );
+		$utc = new DateTimeZone( 'UTC' );
+
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ) {
+			$start = DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', "$value 00:00:00", $utc );
+			$length = 'P1D';
+		} elseif ( preg_match( '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})$/', $value, $matches ) ) {
+			$start = DateTimeImmutable::createFromFormat(
+				'Y-m-d H:i:s', $matches[1] . ' ' . $matches[2], $utc
+			);
+			$length = 'PT1S';
+		} else {
+			return null;
+		}
+
+		if ( $start === false ) {
+			return null;
+		}
+
+		$second = new DateInterval( 'PT1S' );
+		$end = $start->add( new DateInterval( $length ) )->sub( $second );
+		$format = 'Y-m-d\TH:i:s';
+
+		return [
+			'before' => $start->sub( $second )->format( $format ),
+			'start' => $start->format( $format ),
+			'end' => $end->format( $format ),
+			'after' => $end->add( $second )->format( $format )
+		];
 	}
 
 	/**
