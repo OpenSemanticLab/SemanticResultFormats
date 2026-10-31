@@ -1026,7 +1026,9 @@ class DataTables extends ResultPrinter {
 					$printRequest->getCanonicalLabel(),
 					$dataValues,
 					$outputMode,
-					$printRequest->getMode() == PrintRequest::PRINT_THIS
+					$printRequest->getMode() == PrintRequest::PRINT_THIS,
+					null,
+					$printRequest->getParameters()
 				);
 
 				$row[] = $content;
@@ -1039,6 +1041,23 @@ class DataTables extends ResultPrinter {
 	}
 
 	/**
+	 * Whether a printout asked for the SearchBuilder moment conditions with
+	 * |+ datatables-columns.searchBuilderType=moment
+	 *
+	 * @param array $parameters
+	 * @return bool
+	 */
+	private static function hasMomentSearchBuilderType( array $parameters ): bool {
+		foreach ( $parameters as $key => $value ) {
+			if ( strtolower( $key ) === 'datatables-columns.searchbuildertype' ) {
+				return strtolower( trim( $value ) ) === 'moment';
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * @see SMW\Query\ResultPrinters\TableResultPrinter
 	 */
 	public function getCellContent(
@@ -1046,7 +1065,8 @@ class DataTables extends ResultPrinter {
 		array $dataValues,
 		int $outputMode,
 		bool $isSubject,
-		?string $propTypeid = null
+		?string $propTypeid = null,
+		array $printRequestParameters = []
 	): array {
 		if ( !$this->prefixParameterProcessor ) {
 			$dataValueMethod = 'getShortText';
@@ -1128,9 +1148,18 @@ class DataTables extends ResultPrinter {
 		$filterKey = $sortKey;
 
 		// the sort key of a date is a Julian day number, which no filter can be
-		// expressed against, so filtering uses the ISO 8601 date instead
+		// expressed against, so filtering uses the ISO 8601 date instead, with
+		// the time only where the column asked for the moment conditions
 		if ( array_key_exists( 0, $dataValues ) && $dataValues[0] instanceof TimeValue ) {
-			$filterKey = explode( 'T', $dataValues[0]->getISO8601Date() )[0];
+			$iso = $dataValues[0]->getISO8601Date();
+
+			if ( self::hasMomentSearchBuilderType( $printRequestParameters ) ) {
+				$filterKey = strpos( $iso, 'T' ) !== false
+					? str_replace( 'T', ' ', $iso )
+					: $iso . ' 00:00:00';
+			} else {
+				$filterKey = explode( 'T', $iso )[0];
+			}
 		}
 
 		return [

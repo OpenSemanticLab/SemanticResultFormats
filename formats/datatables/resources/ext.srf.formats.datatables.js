@@ -31,6 +31,22 @@
 	 * @member srf.formats.datatables
 	 */
 	const _datatables = {
+		// format of the filter key of a column using the moment conditions,
+		// @see SRF\DataTables::getCellContent
+		momentFormat: 'YYYY-MM-DD HH:mm:ss',
+
+		isMomentType: function ( value ) {
+			return typeof value === 'string' && value.trim().toLowerCase() === 'moment';
+		},
+
+		usesMoment: function ( data ) {
+			const options = data.printoutsParametersOptions || {};
+			return Object.keys( options ).some(
+				( index ) => options[ index ] &&
+					_datatables.isMomentType( options[ index ].searchBuilderType )
+			);
+		},
+
 		/**
 		 * Returns ID
 		 *
@@ -598,6 +614,13 @@
 			const searchBuilder = options.searchBuilder;
 
 			if ( searchBuilder ) {
+				// the date conditions and the date picker of SearchBuilder parse
+				// and format with moment as soon as the format carries a time
+				// @see https://datatables.net/manual/plug-ins/dependencies
+				if ( window.moment && typeof $.fn.dataTable.use === 'function' ) {
+					$.fn.dataTable.use( window.moment );
+				}
+
 				// @see https://datatables.net/extensions/searchbuilder/customConditions.html
 				// @see https://github.com/DataTables/SearchBuilder/blob/master/src/searchBuilder.ts
 				options.searchBuilder = {
@@ -695,29 +718,36 @@
 				options.columns.type = isNumeric || isDate ? 'num' : 'string';
 				options.columns.searchBuilderType = isDate ? 'date' : null;
 
-				columnDefs.push(
-					$.extend(
-						{
-							// https://datatables.net/reference/option/columnDefs
-							// data: ...
-							title: property.label,
-							// get canonical label or empty string if mainlabel
-							name: printrequests[ index ].key !== '' ? printouts[ index ][ 1 ] : '',
-							className: 'smwtype' + property.typeid,
-							targets: [ index ],
+				const columnDef = $.extend(
+					{
+						// https://datatables.net/reference/option/columnDefs
+						// data: ...
+						title: property.label,
+						// get canonical label or empty string if mainlabel
+						name: printrequests[ index ].key !== '' ? printouts[ index ][ 1 ] : '',
+						className: 'smwtype' + property.typeid,
+						targets: [ index ],
 
-							// https://datatables.net/reference/option/columns.render
-							render: {
-								_: 'display',
-								display: 'display',
-								filter: 'filter',
-								sort: 'sort'
-							}
-						},
-						options.columns,
-						data.printoutsParametersOptions[ index ]
-					)
+						// https://datatables.net/reference/option/columns.render
+						render: {
+							_: 'display',
+							display: 'display',
+							filter: 'filter',
+							sort: 'sort'
+						}
+					},
+					options.columns,
+					data.printoutsParametersOptions[ index ]
 				);
+
+				// |+ datatables-columns.searchBuilderType=moment switches a column
+				// to the moment conditions, which filter on the time as well, the
+				// format has to match the filter key built in DataTables.php
+				if ( _datatables.isMomentType( columnDef.searchBuilderType ) ) {
+					columnDef.searchBuilderType = 'datetime-' + _datatables.momentFormat;
+				}
+
+				columnDefs.push( columnDef );
 			} );
 
 			if ( searchPanes ) {
@@ -889,7 +919,15 @@
 		$( '.datatables-container' ).each( function () {
 			const container = $( this );
 			const data = JSON.parse( _datatables.getData( container ) );
-			datatables.init( container, data );
+
+			// moment is only needed by a column using the moment conditions
+			if ( _datatables.usesMoment( data ) && !window.moment ) {
+				mw.loader.using( 'moment' ).then( () => {
+					datatables.init( container, data );
+				} );
+			} else {
+				datatables.init( container, data );
+			}
 		} );
 	} );
 }( jQuery, mediaWiki, semanticFormats ) );
