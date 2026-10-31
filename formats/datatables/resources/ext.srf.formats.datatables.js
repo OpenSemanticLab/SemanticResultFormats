@@ -62,6 +62,77 @@
 		},
 
 		/**
+		 * Whether a cell carries a value at all, using the test of the
+		 * SearchBuilder Empty condition
+		 *
+		 * @param value
+		 * @private
+		 * @return {boolean}
+		 */
+		hasValue: function ( value ) {
+			return !( value === null || value === undefined || value.length === 0 );
+		},
+
+		/**
+		 * SearchBuilder conditions that ignore a cell without a value.
+		 *
+		 * The filter key of such a cell is the empty string, which the built in
+		 * conditions coerce: +'' is 0 and '' sorts before every date, so a row
+		 * without a value is returned by Less Than, Before, Not and Not Between.
+		 * A query cannot return a row that lacks the property, so a server side
+		 * table disagrees with the same table rendered in the browser.
+		 *
+		 * Only the search method is replaced. The condition is merged into the
+		 * default by a deep extend, so conditionName, init, inputValue and
+		 * isInputValid stay the ones of the default condition.
+		 *
+		 * @private
+		 * @return {Object}
+		 */
+		emptyAwareConditions: function () {
+			const searchBuilder = $.fn.dataTable.SearchBuilder;
+			const defaults = searchBuilder && searchBuilder.defaults ?
+				searchBuilder.defaults.conditions :
+				null;
+
+			if ( !defaults ) {
+				return {};
+			}
+
+			const conditions = {};
+
+			Object.keys( defaults ).forEach( ( type ) => {
+				conditions[ type ] = {};
+
+				Object.keys( defaults[ type ] ).forEach( ( name ) => {
+					const condition = defaults[ type ][ name ];
+
+					// Empty and Not Empty are the conditions on the empty value
+					// itself and have to keep their meaning
+					if (
+						name === 'null' ||
+						name === '!null' ||
+						!condition ||
+						typeof condition.search !== 'function'
+					) {
+						return;
+					}
+
+					const search = condition.search;
+
+					conditions[ type ][ name ] = {
+						search: function ( value, comparison, criteria ) {
+							return _datatables.hasValue( value ) &&
+								search.call( this, value, comparison, criteria );
+						}
+					};
+				} );
+			} );
+
+			return conditions;
+		},
+
+		/**
 		 * Returns ID
 		 *
 		 * @param container
@@ -639,20 +710,24 @@
 				// @see https://github.com/DataTables/SearchBuilder/blob/master/src/searchBuilder.ts
 				options.searchBuilder = {
 					depthLimit: 1,
-					conditions: {
-						html: {
-							null: null
-						},
-						string: {
-							null: null
-						},
-						date: {
-							null: null
-						},
-						num: {
-							null: null
+					conditions: $.extend(
+						true,
+						_datatables.emptyAwareConditions(),
+						{
+							html: {
+								null: null
+							},
+							string: {
+								null: null
+							},
+							date: {
+								null: null
+							},
+							num: {
+								null: null
+							}
 						}
-					}
+					)
 				};
 			}
 
