@@ -683,11 +683,17 @@
 			const columnDefs = [];
 			$.map( printrequests, ( property, index ) => {
 
+				const isDate = property.typeid === '_dat';
+
 				const isNumeric =
 					( entityCollation === 'numeric' && property.typeid === '_wpg' ) ||
 					[ '_num', '_tem', '_qty' ].includes( property.typeid );
 
-				options.columns.type = isNumeric ? 'num' : 'string';
+				// dates are sorted on the Julian day number of the sort key and
+				// filtered on the ISO 8601 date of the filter key, hence the
+				// column type and the SearchBuilder type differ
+				options.columns.type = isNumeric || isDate ? 'num' : 'string';
+				options.columns.searchBuilderType = isDate ? 'date' : null;
 
 				columnDefs.push(
 					$.extend(
