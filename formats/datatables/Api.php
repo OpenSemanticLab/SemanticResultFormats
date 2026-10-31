@@ -17,9 +17,11 @@ use DateTimeImmutable;
 use DateTimeZone;
 use ParamProcessor\ParamDefinitionFactory;
 use SMW\DataValueFactory;
+use SMW\DataValues\NumberValue;
 use SMW\DataValues\PropertyChainValue;
 use SMW\Query\PrintRequest;
 use SMW\Services\ServicesFactory;
+use SMWDINumber as DINumber;
 use SMWQuery;
 use SMWQueryProcessor;
 use SpecialVersion;
@@ -205,11 +207,25 @@ class Api extends ApiBase {
 						$v = implode( $criteria['value'] );
 						$str = ( $label !== '' ? "$label::" : '' );
 
-						if ( $label !== '' && ( $printrequest['typeid'] ?? '' ) === '_dat' ) {
+						$typeid = $printrequest['typeid'] ?? '';
+
+						if ( $label !== '' && $typeid === '_dat' ) {
 							$dateCondition = self::dateCondition( $label, $criteria );
 
 							if ( $dateCondition !== null ) {
 								$searchBuilder[] = $dateCondition;
+								continue;
+							}
+						}
+
+						if ( $label !== '' && in_array( $typeid, [ '_num', '_qty', '_tem' ], true ) ) {
+							$unit = self::filterKeyUnit( $label, (string)( $value[3] ?? '' ) );
+							$numberCondition = $unit !== null
+								? self::numberCondition( $label, $unit, $criteria )
+								: null;
+
+							if ( $numberCondition !== null ) {
+								$searchBuilder[] = $numberCondition;
 								continue;
 							}
 						}
@@ -328,6 +344,109 @@ class Api extends ApiBase {
 		}
 
 		$this->getResult()->addValue( null, "datatables-json", $ret );
+	}
+
+	/**
+	 * Unit the filter key of a numeric column is expressed in. SRF\DataTables
+	 * ::getCellContent takes it from the converted unit values under the main
+	 * unit the output format selects, so the same lookup is repeated here, on
+	 * a value built from a data item the way the result rows are. A plain
+	 * number has no unit and yields an empty string.
+	 *
+	 * @param string $propertyLabel
+	 * @param string $outputFormat
+	 * @return string|null null when the property carries no numeric value
+	 */
+	private static function filterKeyUnit( string $propertyLabel, string $outputFormat ): ?string {
+		$dataValueFactory = DataValueFactory::getInstance();
+		$propertyValue = $dataValueFactory->newPropertyValueByLabel( $propertyLabel );
+
+		if ( !$propertyValue->isValid() ) {
+			return null;
+		}
+
+		$dataValue = $dataValueFactory->newDataValueByItem(
+			new DINumber( 1 ),
+			$propertyValue->getDataItem()
+		);
+
+		if ( !( $dataValue instanceof NumberValue ) ) {
+			return null;
+		}
+
+		if ( $outputFormat !== '' ) {
+			$dataValue->setOutputFormat( $outputFormat );
+		}
+
+		return $dataValue->getCanonicalMainUnit();
+	}
+
+	/**
+	 * Translates a SearchBuilder criteria on a number, quantity or temperature
+	 * column into a query condition. The criteria carries the filter key, which
+	 * is the value in the unit the cell renders in, so the unit is appended
+	 * rather than left to the default of the property.
+	 *
+	 * Only the strict comparators are used, the inclusive bounds are expressed
+	 * as a disjunction with the bound itself, so that the result does not
+	 * depend on $smwgStrictComparators.
+	 *
+	 * @param string $label
+	 * @param string $unit
+	 * @param array $criteria
+	 * @return string|null null when the criteria carries no usable number
+	 */
+	private static function numberCondition( string $label, string $unit, array $criteria ): ?string {
+		$values = [];
+
+		foreach ( $criteria['value'] ?? [] as $value ) {
+			$value = trim( (string)$value );
+
+			if ( !is_numeric( $value ) ) {
+				return null;
+			}
+
+			$values[] = $value . ( $unit !== '' ? " $unit" : '' );
+		}
+
+		$single = $values[0] ?? null;
+
+		switch ( $criteria['condition'] ) {
+			case '=':
+				return $single !== null ? "[[$label::$single]]" : null;
+
+			case '!=':
+				return $single !== null ? "[[$label::<<$single||>>$single]]" : null;
+
+			case '<':
+				return $single !== null ? "[[$label::<<$single]]" : null;
+
+			case '<=':
+				return $single !== null ? "[[$label::<<$single||$single]]" : null;
+
+			case '>=':
+				return $single !== null ? "[[$label::>>$single||$single]]" : null;
+
+			case '>':
+				return $single !== null ? "[[$label::>>$single]]" : null;
+
+			case 'between':
+			case '!between':
+				if ( count( $values ) < 2 ) {
+					return null;
+				}
+
+				// SearchBuilder accepts the two values in either order
+				[ $from, $to ] = (float)$criteria['value'][0] <= (float)$criteria['value'][1]
+					? [ $values[0], $values[1] ]
+					: [ $values[1], $values[0] ];
+
+				return $criteria['condition'] === 'between'
+					? "[[$label::>>$from||$from]][[$label::<<$to||$to]]"
+					: "[[$label::<<$from||>>$to]]";
+		}
+
+		return null;
 	}
 
 	/**
