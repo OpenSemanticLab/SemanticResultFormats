@@ -19,6 +19,7 @@ use ParamProcessor\ParamDefinitionFactory;
 use SMW\DataValueFactory;
 use SMW\DataValues\NumberValue;
 use SMW\DataValues\PropertyChainValue;
+use SMW\DataValues\PropertyValue;
 use SMW\Query\PrintRequest;
 use SMW\Services\ServicesFactory;
 use SMWDINumber as DINumber;
@@ -353,15 +354,19 @@ class Api extends ApiBase {
 	 * a value built from a data item the way the result rows are. A plain
 	 * number has no unit and yields an empty string.
 	 *
+	 * The values of a chained printout belong to the last property of the
+	 * chain, so the unit is taken from that one. The chain itself resolves to
+	 * no property at all.
+	 *
 	 * @param string $propertyLabel
 	 * @param string $outputFormat
 	 * @return string|null null when the property carries no numeric value
 	 */
 	private static function filterKeyUnit( string $propertyLabel, string $outputFormat ): ?string {
 		$dataValueFactory = DataValueFactory::getInstance();
-		$propertyValue = $dataValueFactory->newPropertyValueByLabel( $propertyLabel );
+		$propertyValue = self::leafPropertyValue( $dataValueFactory, $propertyLabel );
 
-		if ( !$propertyValue->isValid() ) {
+		if ( $propertyValue === null || !$propertyValue->isValid() ) {
 			return null;
 		}
 
@@ -379,6 +384,30 @@ class Api extends ApiBase {
 		}
 
 		return $dataValue->getCanonicalMainUnit();
+	}
+
+	/**
+	 * Property a column takes its values from, which for a chained printout is
+	 * the last property of the chain and otherwise the property itself.
+	 *
+	 * A property label may itself contain a dot, so a label that does not parse
+	 * as a chain is still tried as a property.
+	 *
+	 * @param DataValueFactory $dataValueFactory
+	 * @param string $label
+	 * @return PropertyValue|null null when the label resolves to no property
+	 */
+	private static function leafPropertyValue( DataValueFactory $dataValueFactory, string $label ): ?PropertyValue {
+		if ( PropertyChainValue::isChained( $label ) ) {
+			$chainValue = $dataValueFactory->newDataValueByType( PropertyChainValue::TYPE_ID );
+			$chainValue->setUserValue( $label );
+
+			if ( $chainValue->isValid() ) {
+				return $chainValue->getLastPropertyChainValue();
+			}
+		}
+
+		return $dataValueFactory->newPropertyValueByLabel( $label );
 	}
 
 	/**
