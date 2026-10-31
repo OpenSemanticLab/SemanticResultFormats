@@ -1169,6 +1169,12 @@ class DataTables extends ResultPrinter {
 			$unitValues = $dataValue->getConvertedUnitValues();
 			$displayUnit = $dataValue->getCanonicalMainUnit();
 
+			// the printout and the property can both leave the unit open, the
+			// cell then renders in the canonical unit
+			if ( $displayUnit === false ) {
+				$displayUnit = $dataValue->getUnit();
+			}
+
 			if ( array_key_exists( $displayUnit, $unitValues ) ) {
 				$filterKey = $unitValues[$displayUnit];
 			}

@@ -48,6 +48,20 @@
 		},
 
 		/**
+		 * Text of a cell without the tooltip a value can carry, e.g. the unit
+		 * conversions of a quantity
+		 *
+		 * @param html
+		 * @private
+		 * @return {string}
+		 */
+		plainText: function ( html ) {
+			const node = $( '<div>' ).html( html );
+			node.find( '.smwttcontent' ).remove();
+			return node.text().replace( /\s+/g, ' ' ).trim();
+		},
+
+		/**
 		 * Returns ID
 		 *
 		 * @param container
@@ -733,7 +747,17 @@
 							_: 'display',
 							display: 'display',
 							filter: 'filter',
-							sort: 'sort'
+							sort: 'sort',
+							// label of the SearchBuilder value dropdown
+							sbLabel: ( cellData ) => _datatables.plainText( cellData.display )
+						},
+
+						// the labels of the value dropdown are taken from the
+						// display value, which can carry a tooltip
+						searchBuilder: {
+							orthogonal: {
+								display: 'sbLabel'
+							}
 						}
 					},
 					options.columns,
